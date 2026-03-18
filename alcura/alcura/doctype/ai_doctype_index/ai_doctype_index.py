@@ -1,6 +1,8 @@
 import frappe
 from frappe.model.document import Document
 
+SKIP_FIELDTYPES = {"Section Break", "Column Break", "Tab Break", "HTML", "Fold"}
+
 
 class AIDocTypeIndex(Document):
 
@@ -14,8 +16,19 @@ class AIDocTypeIndex(Document):
 
 	def _validate_fields(self):
 		meta = frappe.get_meta(self.reference_doctype)
-		valid_fieldnames = {f.fieldname for f in meta.fields}
-		valid_fieldnames.add("name")
+		valid_fieldnames = {"name"}
+
+		child_table_map = {}
+		for f in meta.fields:
+			valid_fieldnames.add(f.fieldname)
+			if f.fieldtype in ("Table", "Table MultiSelect") and f.options:
+				child_table_map[f.fieldname] = f.options
+
+		for table_fieldname, child_dt in child_table_map.items():
+			child_meta = frappe.get_meta(child_dt)
+			for cf in child_meta.fields:
+				if cf.fieldtype not in SKIP_FIELDTYPES:
+					valid_fieldnames.add(f"{table_fieldname}.{cf.fieldname}")
 
 		for row in self.index_fields:
 			if row.field_name not in valid_fieldnames:
@@ -25,15 +38,28 @@ class AIDocTypeIndex(Document):
 
 	@frappe.whitelist()
 	def populate_fields(self):
-		"""Auto-populate the fields table from the reference DocType's meta."""
+		"""Auto-populate the fields table from the reference DocType and its child tables."""
 		meta = frappe.get_meta(self.reference_doctype)
 		self.index_fields = []
 
-		skip_types = {"Section Break", "Column Break", "Tab Break", "HTML", "Fold"}
+		self.index_fields.append(
+			{
+				"field_name": "name",
+				"field_label": "ID",
+				"field_type": "Data",
+			}
+		)
+
+		child_tables = []
 
 		for field in meta.fields:
-			if field.fieldtype in skip_types:
+			if field.fieldtype in SKIP_FIELDTYPES:
 				continue
+
+			if field.fieldtype in ("Table", "Table MultiSelect") and field.options:
+				child_tables.append((field.fieldname, field.label or field.fieldname, field.options))
+				continue
+
 			self.index_fields.append(
 				{
 					"field_name": field.fieldname,
@@ -42,11 +68,15 @@ class AIDocTypeIndex(Document):
 				}
 			)
 
-		self.index_fields.insert(
-			0,
-			{
-				"field_name": "name",
-				"field_label": "ID",
-				"field_type": "Data",
-			},
-		)
+		for table_fieldname, table_label, child_dt in child_tables:
+			child_meta = frappe.get_meta(child_dt)
+			for cf in child_meta.fields:
+				if cf.fieldtype in SKIP_FIELDTYPES:
+					continue
+				self.index_fields.append(
+					{
+						"field_name": f"{table_fieldname}.{cf.fieldname}",
+						"field_label": f"{table_label} → {cf.label or cf.fieldname}",
+						"field_type": cf.fieldtype,
+					}
+				)
