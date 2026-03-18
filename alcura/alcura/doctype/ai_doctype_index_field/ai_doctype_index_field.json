@@ -11,7 +11,7 @@
 	"fields": [
 		{
 			"fieldname": "field_name",
-			"fieldtype": "Data",
+			"fieldtype": "Select",
 			"in_list_view": 1,
 			"label": "Field Name",
 			"reqd": 1
@@ -21,13 +21,14 @@
 			"fieldtype": "Data",
 			"in_list_view": 1,
 			"label": "Field Label",
-			"reqd": 1
+			"read_only": 1
 		},
 		{
 			"fieldname": "field_type",
 			"fieldtype": "Data",
 			"in_list_view": 1,
-			"label": "Field Type"
+			"label": "Field Type",
+			"read_only": 1
 		}
 	],
 	"index_web_pages_for_search": 0,
