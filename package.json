@@ -1,0 +1,14 @@
+{
+	"name": "alcura",
+	"version": "0.0.1",
+	"description": "Custom Frappe Application",
+	"main": "alcura/public/js/alcura.bundle.js",
+	"scripts": {
+		"lint": "eslint alcura/public/js/ --ext .js",
+		"lint:fix": "eslint alcura/public/js/ --ext .js --fix"
+	},
+	"devDependencies": {
+		"eslint": "^9.0.0"
+	},
+	"license": "MIT"
+}

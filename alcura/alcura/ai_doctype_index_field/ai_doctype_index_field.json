@@ -1,0 +1,46 @@
+{
+	"actions": [],
+	"creation": "2026-03-14 00:00:00.000000",
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"field_name",
+		"field_label",
+		"field_type"
+	],
+	"fields": [
+		{
+			"fieldname": "field_name",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Field Name",
+			"reqd": 1
+		},
+		{
+			"fieldname": "field_label",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Field Label",
+			"reqd": 1
+		},
+		{
+			"fieldname": "field_type",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Field Type"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"istable": 1,
+	"links": [],
+	"modified": "2026-03-14 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Alcura",
+	"name": "AI DocType Index Field",
+	"owner": "Administrator",
+	"permissions": [],
+	"sort_field": "creation",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 0
+}
