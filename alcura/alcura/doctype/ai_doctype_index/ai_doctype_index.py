@@ -80,13 +80,11 @@ class AIDocTypeIndex(Document):
 		meta = frappe.get_meta(self.reference_doctype)
 		self.index_fields = []
 
-		self.index_fields.append(
-			{
-				"field_name": "name",
-				"field_label": "ID",
-				"field_type": "Data",
-			}
-		)
+		self.append("index_fields", {
+			"field_name": "name",
+			"field_label": "ID",
+			"field_type": "Data",
+		})
 
 		child_tables = []
 
@@ -98,23 +96,19 @@ class AIDocTypeIndex(Document):
 				child_tables.append((field.fieldname, field.label or field.fieldname, field.options))
 				continue
 
-			self.index_fields.append(
-				{
-					"field_name": field.fieldname,
-					"field_label": field.label or field.fieldname,
-					"field_type": field.fieldtype,
-				}
-			)
+			self.append("index_fields", {
+				"field_name": field.fieldname,
+				"field_label": field.label or field.fieldname,
+				"field_type": field.fieldtype,
+			})
 
 		for table_fieldname, table_label, child_dt in child_tables:
 			child_meta = frappe.get_meta(child_dt)
 			for cf in child_meta.fields:
 				if cf.fieldtype in SKIP_FIELDTYPES:
 					continue
-				self.index_fields.append(
-					{
-						"field_name": f"{table_fieldname}.{cf.fieldname}",
-						"field_label": f"{table_label} → {cf.label or cf.fieldname}",
-						"field_type": cf.fieldtype,
-					}
-				)
+				self.append("index_fields", {
+					"field_name": f"{table_fieldname}.{cf.fieldname}",
+					"field_label": f"{table_label} → {cf.label or cf.fieldname}",
+					"field_type": cf.fieldtype,
+				})
