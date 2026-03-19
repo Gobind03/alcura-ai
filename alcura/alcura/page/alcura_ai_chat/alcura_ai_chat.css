@@ -280,6 +280,30 @@
 	font-size: 11px;
 }
 
+/* Charts */
+.chat-charts {
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.chat-chart-figure {
+	margin: 0;
+}
+
+.chat-chart-image {
+	max-width: 100%;
+	border-radius: 8px;
+	border: 1px solid var(--border-color);
+	background: var(--card-bg);
+}
+
+.chat-chart-caption {
+	margin-top: 4px;
+	text-align: center;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
 	.alcura-ai-chat-container {

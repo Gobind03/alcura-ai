@@ -186,7 +186,8 @@ class AlcuraAIChat {
 			callback: (r) => {
 				this.remove_typing_indicator();
 				if (r.message && r.message.response) {
-					this.append_message("assistant", r.message.response);
+					const charts = r.message.charts || [];
+					this.append_message("assistant", r.message.response, charts);
 				} else {
 					this.append_message(
 						"assistant",
@@ -210,7 +211,7 @@ class AlcuraAIChat {
 		});
 	}
 
-	append_message(role, content) {
+	append_message(role, content, charts) {
 		this.history.push({ role, content });
 
 		const messages_el = document.getElementById("chat-messages");
@@ -222,6 +223,28 @@ class AlcuraAIChat {
 
 		if (role === "assistant") {
 			bubble.innerHTML = frappe.markdown(content);
+
+			if (charts && charts.length) {
+				const chart_container = document.createElement("div");
+				chart_container.className = "chat-charts";
+				charts.forEach((chart) => {
+					const figure = document.createElement("figure");
+					figure.className = "chat-chart-figure";
+					const img = document.createElement("img");
+					img.src = `data:image/png;base64,${chart.image_base64}`;
+					img.alt = chart.title || "Analysis Chart";
+					img.className = "chat-chart-image";
+					figure.appendChild(img);
+					if (chart.title && chart.title !== `Chart ${charts.indexOf(chart) + 1}`) {
+						const caption = document.createElement("figcaption");
+						caption.className = "chat-chart-caption text-muted text-xs";
+						caption.textContent = chart.title;
+						figure.appendChild(caption);
+					}
+					chart_container.appendChild(figure);
+				});
+				bubble.appendChild(chart_container);
+			}
 		} else {
 			bubble.textContent = content;
 		}

@@ -2,6 +2,7 @@ import json
 
 import frappe
 
+from alcura.services.analysis_service import dispatch_analysis
 from alcura.services.data_service import (
 	build_tool_definitions,
 	dispatch_tool_call,
@@ -19,7 +20,7 @@ def send_message(message, history=None):
 		history: Optional JSON string of prior messages [{role, content}, ...].
 
 	Returns:
-		dict with 'response' key containing the AI's answer.
+		dict with 'response' and 'charts' keys.
 
 	Callable at: /api/method/alcura.api.v1.chat.send_message
 	"""
@@ -60,9 +61,18 @@ def send_message(message, history=None):
 
 	tools = build_tool_definitions()
 
-	response_text = chat_with_tools(messages, tools, dispatch_tool_call)
+	collected_charts = []
 
-	return {"response": response_text}
+	def _dispatch(name, arguments):
+		if name == "run_analysis":
+			result_json, charts = dispatch_analysis(arguments)
+			collected_charts.extend(charts)
+			return result_json
+		return dispatch_tool_call(name, arguments)
+
+	response_text = chat_with_tools(messages, tools, _dispatch)
+
+	return {"response": response_text, "charts": collected_charts}
 
 
 @frappe.whitelist()
