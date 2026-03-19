@@ -16,6 +16,43 @@ from alcura.services.data_service import _get_index_config, fetch_records
 
 EXECUTION_TIMEOUT = 30
 
+_PANDAS_AVAILABLE = True
+_MATPLOTLIB_AVAILABLE = True
+_NUMPY_AVAILABLE = True
+
+try:
+	import pandas  # noqa: F401
+except ImportError:
+	_PANDAS_AVAILABLE = False
+
+try:
+	import matplotlib  # noqa: F401
+except ImportError:
+	_MATPLOTLIB_AVAILABLE = False
+
+try:
+	import numpy  # noqa: F401
+except ImportError:
+	_NUMPY_AVAILABLE = False
+
+
+def _check_dependencies():
+	"""Raise a clear error if required analysis dependencies are missing."""
+	missing = []
+	if not _PANDAS_AVAILABLE:
+		missing.append("pandas")
+	if not _MATPLOTLIB_AVAILABLE:
+		missing.append("matplotlib")
+	if not _NUMPY_AVAILABLE:
+		missing.append("numpy")
+	if missing:
+		raise ImportError(
+			f"The run_analysis tool requires the following packages which are not installed: "
+			f"{', '.join(missing)}. Install them with: pip install {' '.join(missing)}. "
+			f"Use the other structured tools (date_series, aggregate_data, statistical_summary, "
+			f"fetch_records) instead -- they do not require these dependencies."
+		)
+
 SAFE_BUILTINS = {
 	"abs": abs,
 	"all": all,
@@ -108,6 +145,7 @@ def _load_datasets(datasets):
 	Returns:
 		dict of variable_name -> pandas.DataFrame
 	"""
+	_check_dependencies()
 	import pandas as pd
 
 	frames = {}
@@ -141,6 +179,8 @@ def run_analysis(code, datasets=None):
 		  - "output": captured print/stdout text
 		  - "charts": list of {"title": str, "image_base64": str}
 	"""
+	_check_dependencies()
+
 	import matplotlib
 	matplotlib.use("Agg")
 	import matplotlib.pyplot as plt

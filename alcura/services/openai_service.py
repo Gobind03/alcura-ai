@@ -4,7 +4,8 @@ import frappe
 from openai import OpenAI
 
 
-MAX_TOOL_ITERATIONS = 10
+MAX_TOOL_ITERATIONS = 25
+BUDGET_WARNING_THRESHOLD = 20
 
 
 def get_settings():
@@ -65,7 +66,20 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 	uses_max_completion_tokens = model.startswith("gpt-4.1") or model.startswith("o")
 	token_param = "max_completion_tokens" if uses_max_completion_tokens else "max_tokens"
 
-	for _iteration in range(MAX_TOOL_ITERATIONS):
+	failed_tools = {}
+
+	for iteration in range(MAX_TOOL_ITERATIONS):
+		if iteration == BUDGET_WARNING_THRESHOLD:
+			remaining = MAX_TOOL_ITERATIONS - iteration
+			messages.append({
+				"role": "system",
+				"content": (
+					f"[SYSTEM] You have only {remaining} tool-call rounds remaining. "
+					"Wrap up your analysis now and provide a final answer with "
+					"whatever data you have collected so far."
+				),
+			})
+
 		kwargs = {
 			"model": model,
 			"messages": messages,
@@ -89,7 +103,17 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 				try:
 					result = tool_dispatcher(fn_name, fn_args)
 				except Exception as e:
-					result = json.dumps({"error": str(e)})
+					error_key = f"{fn_name}:{type(e).__name__}"
+					failed_tools[error_key] = failed_tools.get(error_key, 0) + 1
+					error_msg = str(e)
+
+					if failed_tools[error_key] >= 2:
+						error_msg += (
+							" [This tool has failed multiple times with the same error. "
+							"Do NOT retry it. Use a different tool or answer with the data you already have.]"
+						)
+
+					result = json.dumps({"error": error_msg})
 
 				if not isinstance(result, str):
 					result = json.dumps(result, default=str)
