@@ -99,10 +99,11 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 	token_param = "max_completion_tokens" if uses_max_completion_tokens else "max_tokens"
 
 	failed_tools = {}
+	logger = _get_logger()
 
 	for iteration in range(MAX_TOOL_ITERATIONS):
 		if iteration >= FORCE_ANSWER_AFTER:
-			_get_logger().info(f"Iteration {iteration}: forcing text response (budget exceeded)")
+			logger.info(f"Iteration {iteration}: forcing text response (budget exceeded)")
 			return _force_text_response(
 				client, model, messages, temperature, token_param, max_tokens, tools
 			)
@@ -115,16 +116,18 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 		}
 		if tools:
 			kwargs["tools"] = tools
-			kwargs["tool_choice"] = "auto"
+			# Force the model to call at least one tool on the first iteration
+			# so it actually looks up data before deciding it can't answer.
+			kwargs["tool_choice"] = "required" if iteration == 0 else "auto"
 
 		response = client.chat.completions.create(**kwargs)
 		choice = response.choices[0]
 
-		if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+		if choice.message.tool_calls:
 			messages.append(choice.message.model_dump(exclude_none=True))
 
 			tool_names = [tc.function.name for tc in choice.message.tool_calls]
-			_get_logger().info(f"Iteration {iteration}: tool calls = {tool_names}")
+			logger.info(f"Iteration {iteration}: tool calls = {tool_names}")
 
 			for tool_call in choice.message.tool_calls:
 				fn_name = tool_call.function.name
@@ -137,7 +140,7 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 					failed_tools[error_key] = failed_tools.get(error_key, 0) + 1
 					error_msg = str(e)
 
-					_get_logger().warning(
+					logger.warning(
 						f"Iteration {iteration}: {fn_name} failed ({type(e).__name__}): {error_msg[:200]}"
 					)
 
@@ -165,7 +168,7 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 				)
 			continue
 
-		_get_logger().info(f"Iteration {iteration}: model returned text response")
+		logger.info(f"Iteration {iteration}: model returned text response (finish_reason={choice.finish_reason})")
 		return choice.message.content or ""
 
 	return "I was unable to complete the analysis within the allowed number of steps. Please try a simpler question."

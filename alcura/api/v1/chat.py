@@ -11,6 +11,10 @@ from alcura.services.data_service import (
 from alcura.services.openai_service import chat_with_tools
 
 
+def _get_logger():
+	return frappe.logger("alcura_ai", allow_site=True)
+
+
 @frappe.whitelist()
 def send_message(message, history=None):
 	"""Send a message to the AI and get a response.
@@ -37,9 +41,16 @@ def send_message(message, history=None):
 	if not indexed:
 		frappe.throw("No DocTypes are indexed for AI access. Please configure at least one AI DocType Index.")
 
+	logger = _get_logger()
+
 	doctypes_description = "\n".join(
 		f"- {d['doctype']}: {d['description']} (fields: {', '.join(f['field_name'] for f in d['fields'])})"
 		for d in indexed
+	)
+
+	logger.info(
+		f"Indexed doctypes: {[d['doctype'] for d in indexed]}, "
+		f"total fields: {sum(len(d['fields']) for d in indexed)}"
 	)
 
 	system_prompt_template = settings.system_prompt or (
@@ -47,6 +58,13 @@ def send_message(message, history=None):
 		"Say 'I don't have enough data' if you cannot find relevant information."
 	)
 	system_prompt = system_prompt_template.replace("{indexed_doctypes}", doctypes_description)
+
+	if "{indexed_doctypes}" not in system_prompt_template:
+		system_prompt += f"\n\nAvailable data sources:\n{doctypes_description}"
+		logger.warning(
+			"System prompt does not contain {indexed_doctypes} placeholder. "
+			"Appending available data sources automatically."
+		)
 
 	messages = [{"role": "system", "content": system_prompt}]
 
@@ -61,16 +79,30 @@ def send_message(message, history=None):
 
 	tools = build_tool_definitions()
 
+	logger.info(f"User message: {message.strip()[:200]}")
+	logger.info(f"Tool definitions count: {len(tools)}")
+	logger.info(f"System prompt length: {len(system_prompt)} chars")
+
 	collected_charts = []
 
 	def _dispatch(name, arguments):
-		if name == "run_analysis":
-			result_json, charts = dispatch_analysis(arguments)
-			collected_charts.extend(charts)
-			return result_json
-		return dispatch_tool_call(name, arguments)
+		logger.info(f"Dispatching tool: {name}, args keys: {list(arguments.keys()) if isinstance(arguments, dict) else 'N/A'}")
+		try:
+			if name == "run_analysis":
+				result_json, charts = dispatch_analysis(arguments)
+				collected_charts.extend(charts)
+				logger.info(f"run_analysis returned {len(result_json)} chars, {len(charts)} charts")
+				return result_json
+			result = dispatch_tool_call(name, arguments)
+			logger.info(f"{name} returned {len(result)} chars")
+			return result
+		except Exception as e:
+			logger.error(f"Tool {name} raised {type(e).__name__}: {str(e)[:300]}")
+			raise
 
 	response_text = chat_with_tools(messages, tools, _dispatch)
+
+	logger.info(f"Final response length: {len(response_text)} chars, charts: {len(collected_charts)}")
 
 	return {"response": response_text, "charts": collected_charts}
 
