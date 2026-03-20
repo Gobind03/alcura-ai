@@ -4,8 +4,8 @@ import frappe
 from openai import OpenAI
 
 
-MAX_TOOL_ITERATIONS = 25
-FORCE_ANSWER_AFTER = 15
+MAX_TOOL_ITERATIONS = 10
+FORCE_ANSWER_AFTER = 8
 
 
 def _get_logger():
@@ -152,6 +152,9 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 
 				if not isinstance(result, str):
 					result = json.dumps(result, default=str)
+
+				if len(result) > 16000:
+					result = result[:16000] + "\n...[truncated]"
 
 				messages.append(
 					{
