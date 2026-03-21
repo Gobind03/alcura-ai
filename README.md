@@ -15,58 +15,60 @@ Custom Frappe Application built on Frappe Framework v15.
 ```bash
 # From your frappe-bench directory
 bench get-app https://github.com/alcura/alcura.git
-bench --site your-site.localhost install-app alcura
+bench --site your-site.localhost install-app alcura_ai
 ```
+
+The app’s Python package is `alcura_ai` (`app_name` in `hooks.py`). The directory under `apps/` may still be named `alcura` from the clone URL; use `install-app alcura_ai` regardless.
 
 ### Development Setup
 
 ```bash
 # Install the app in development mode
 bench get-app /path/to/alcura
-bench --site your-site.localhost install-app alcura
+bench --site your-site.localhost install-app alcura_ai
 
 # Build frontend assets
-bench build --app alcura
+bench build --app alcura_ai
 
 # Watch for changes during development
-bench watch --apps alcura
+bench watch --apps alcura_ai
 ```
 
 ## Project Structure
 
 ```
-alcura/
-├── alcura/
-│   ├── api/           # Whitelisted REST API endpoints
-│   ├── config/        # Desk and documentation config
-│   ├── alcura/        # Default module (DocTypes live here)
-│   ├── overrides/     # DocType override classes
-│   ├── services/      # Business logic layer
-│   ├── utils/         # Shared utility functions
-│   ├── public/        # Static assets (JS/CSS bundles)
-│   ├── templates/     # Jinja templates
-│   ├── www/           # Portal pages
-│   ├── tests/         # Test suite
-│   ├── patches/       # Data migration patches
-│   ├── hooks.py       # Frappe hook registrations
-│   ├── modules.txt    # Module definitions
-│   └── patches.txt    # Patch execution order
-├── frontend/          # Optional SPA frontend
-├── pyproject.toml     # Build config, deps, linting
-└── package.json       # Node dependencies
+alcura/                    # repository root (name from git clone)
+├── alcura_ai/             # Frappe app package (matches app_name)
+│   ├── api/               # Whitelisted REST API endpoints
+│   ├── config/            # Desk and documentation config
+│   ├── alcura/            # Default module (DocTypes live here)
+│   ├── overrides/         # DocType override classes
+│   ├── services/          # Business logic layer
+│   ├── utils/             # Shared utility functions
+│   ├── public/            # Static assets (JS/CSS bundles)
+│   ├── templates/         # Jinja templates
+│   ├── www/               # Portal pages
+│   ├── tests/             # Test suite
+│   ├── patches/           # Data migration patches
+│   ├── hooks.py           # Frappe hook registrations
+│   ├── modules.txt        # Module definitions
+│   └── patches.txt        # Patch execution order
+├── frontend/              # Optional SPA frontend
+├── pyproject.toml         # Build config, deps, linting
+└── package.json           # Node dependencies
 ```
 
 ## Backend Development
 
 ### Adding a New Module
 
-1. Create a directory under `alcura/` for the module
-2. Add the module name to `alcura/modules.txt`
+1. Create a directory under `alcura_ai/` for the module
+2. Add the module name to `alcura_ai/modules.txt`
 3. Create DocTypes inside the module directory using `bench new-doctype`
 
 ### Adding API Endpoints
 
-Place whitelisted methods under `alcura/api/`:
+Place whitelisted methods under `alcura_ai/api/`:
 
 ```python
 import frappe
@@ -76,21 +78,21 @@ def my_endpoint():
     return {"status": "ok"}
 ```
 
-Callable at: `/api/method/alcura.api.v1.my_endpoint`
+Callable at: `/api/method/alcura_ai.api.v1.my_endpoint`
 
 ### Database Patches
 
-Add migration functions to `alcura/patches/` and register them in `alcura/patches.txt`:
+Add migration functions to `alcura_ai/patches/` and register them in `alcura_ai/patches.txt`:
 
 ```
-alcura.patches.my_patch
+alcura_ai.patches.my_patch
 ```
 
 ## Frontend Development
 
 ### Desk Bundles
 
-Edit `alcura/public/js/alcura.bundle.js` and `alcura/public/css/alcura.bundle.css` to customize the Desk UI. These are automatically picked up by `bench build`.
+Edit `alcura_ai/public/js/alcura_ai.bundle.js` and `alcura_ai/public/css/alcura_ai.bundle.css` to customize the Desk UI. These are automatically picked up by `bench build`.
 
 ### Optional SPA Frontend
 
@@ -118,13 +120,13 @@ npm run dev
 
 ```bash
 # Run all tests for this app
-bench run-tests --app alcura
+bench run-tests --app alcura_ai
 
 # Run a specific test module
-bench run-tests --app alcura --module alcura.tests.test_sample_api
+bench run-tests --app alcura_ai --module alcura_ai.tests.test_sample_api
 
 # Run tests for a specific DocType
-bench run-tests --app alcura --doctype "Your DocType"
+bench run-tests --app alcura_ai --doctype "Your DocType"
 ```
 
 ## Code Quality
@@ -133,8 +135,8 @@ bench run-tests --app alcura --doctype "Your DocType"
 
 ```bash
 # Python (ruff)
-ruff check alcura/
-ruff format --check alcura/
+ruff check alcura_ai/
+ruff format --check alcura_ai/
 
 # JavaScript (eslint)
 yarn lint

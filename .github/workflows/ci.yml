@@ -21,10 +21,10 @@ jobs:
         run: pip install ruff
 
       - name: Check formatting
-        run: ruff format --check alcura/
+        run: ruff format --check alcura_ai/
 
       - name: Lint
-        run: ruff check alcura/
+        run: ruff check alcura_ai/
 
   lint-js:
     name: JavaScript Lint (eslint)
@@ -50,4 +50,4 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #     - name: Run tests
-  #       run: bench run-tests --app alcura
+  #       run: bench run-tests --app alcura_ai
