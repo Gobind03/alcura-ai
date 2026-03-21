@@ -351,7 +351,10 @@ def date_series(doctype, date_field, period="month", metric_field="*", function=
 		period_expr = f"CONCAT(YEAR(`{date_field}`), '-Q', QUARTER(`{date_field}`))"
 	else:
 		fmt = DATE_PERIOD_FORMATS[period]
-		period_expr = f"DATE_FORMAT(`{date_field}`, '{fmt}')"
+		# Double the % signs so they survive frappe.db.sql's %-formatting
+		# e.g. '%Y-%m' becomes '%%Y-%%m' which produces '%Y-%m' in the final SQL
+		safe_fmt = fmt.replace("%", "%%")
+		period_expr = f"DATE_FORMAT(`{date_field}`, '{safe_fmt}')"
 
 	sql = (
 		f"SELECT {period_expr} as period, {function}({col_ref}) as result "
