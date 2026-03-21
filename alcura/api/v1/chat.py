@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 import frappe
 
@@ -57,7 +58,11 @@ def send_message(message, history=None):
 		"You are a data assistant. Answer questions ONLY using data from your tools. "
 		"Say 'I don't have enough data' if you cannot find relevant information."
 	)
+
+	now = datetime.now()
 	system_prompt = system_prompt_template.replace("{indexed_doctypes}", doctypes_description)
+	system_prompt = system_prompt.replace("{current_date}", now.strftime("%Y-%m-%d"))
+	system_prompt = system_prompt.replace("{current_datetime}", now.strftime("%Y-%m-%d %H:%M:%S"))
 
 	if "{indexed_doctypes}" not in system_prompt_template:
 		system_prompt += f"\n\nAvailable data sources:\n{doctypes_description}"
@@ -65,6 +70,16 @@ def send_message(message, history=None):
 			"System prompt does not contain {indexed_doctypes} placeholder. "
 			"Appending available data sources automatically."
 		)
+
+	date_context = (
+		f"\n\nCURRENT DATE CONTEXT:\n"
+		f"- Today's date: {now.strftime('%Y-%m-%d')}\n"
+		f"- Current time: {now.strftime('%H:%M:%S')}\n"
+		f"- When users refer to relative dates (e.g. 'last 1 year', 'past 6 months', "
+		f"'this quarter'), calculate the exact date range using today's date.\n"
+		f"- Always use YYYY-MM-DD format for date filter values."
+	)
+	system_prompt += date_context
 
 	messages = [{"role": "system", "content": system_prompt}]
 
