@@ -1,0 +1,231 @@
+{
+	"actions": [],
+	"creation": "2026-03-14 00:00:00.000000",
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"enabled",
+		"column_break_auth",
+		"api_key",
+		"section_break_model",
+		"model",
+		"column_break_model",
+		"temperature",
+		"max_tokens",
+		"section_break_limits",
+		"rate_limit_per_hour",
+		"column_break_limits",
+		"max_history_messages",
+		"max_tool_iterations",
+		"section_break_rag",
+		"enable_rag",
+		"column_break_rag",
+		"embedding_model",
+		"section_break_qdrant",
+		"qdrant_url",
+		"qdrant_api_key",
+		"column_break_qdrant",
+		"qdrant_collection",
+		"qdrant_vector_size",
+		"rag_top_k",
+		"section_break_prompt",
+		"system_prompt",
+		"section_break_actions",
+		"test_connection_html"
+	],
+	"fields": [
+		{
+			"default": "0",
+			"fieldname": "enabled",
+			"fieldtype": "Check",
+			"label": "Enabled"
+		},
+		{
+			"fieldname": "column_break_auth",
+			"fieldtype": "Column Break"
+		},
+		{
+			"fieldname": "api_key",
+			"fieldtype": "Password",
+			"label": "OpenAI API Key",
+			"reqd": 1
+		},
+		{
+			"fieldname": "section_break_model",
+			"fieldtype": "Section Break",
+			"label": "Model Configuration"
+		},
+		{
+			"default": "gpt-4o-mini",
+			"fieldname": "model",
+			"fieldtype": "Select",
+			"label": "Model",
+			"options": "gpt-4o\ngpt-4o-mini\ngpt-4-turbo\ngpt-4.1\ngpt-4.1-mini\ngpt-4.1-nano",
+			"reqd": 1
+		},
+		{
+			"fieldname": "column_break_model",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "0.2",
+			"description": "Lower values produce more factual, deterministic responses",
+			"fieldname": "temperature",
+			"fieldtype": "Float",
+			"label": "Temperature"
+		},
+		{
+			"default": "4096",
+			"fieldname": "max_tokens",
+			"fieldtype": "Int",
+			"label": "Max Tokens"
+		},
+		{
+			"fieldname": "section_break_limits",
+			"fieldtype": "Section Break",
+			"label": "Rate Limiting & History"
+		},
+		{
+			"default": "0",
+			"description": "Maximum messages a user can send per hour. Set to 0 for unlimited.",
+			"fieldname": "rate_limit_per_hour",
+			"fieldtype": "Int",
+			"label": "Rate Limit (per hour)"
+		},
+		{
+			"fieldname": "column_break_limits",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "20",
+			"description": "Maximum number of conversation history messages sent with each request. Limits token usage on long conversations.",
+			"fieldname": "max_history_messages",
+			"fieldtype": "Int",
+			"label": "Max History Messages"
+		},
+		{
+			"default": "15",
+			"description": "Maximum number of tool-calling iterations per request. Raise for complex RAG + analytics chains.",
+			"fieldname": "max_tool_iterations",
+			"fieldtype": "Int",
+			"label": "Max Tool Iterations"
+		},
+		{
+			"fieldname": "section_break_rag",
+			"fieldtype": "Section Break",
+			"label": "RAG Configuration"
+		},
+		{
+			"default": "0",
+			"description": "Enable retrieval-augmented generation via a Qdrant vector database for semantic search over uploaded knowledge.",
+			"fieldname": "enable_rag",
+			"fieldtype": "Check",
+			"label": "Enable RAG"
+		},
+		{
+			"fieldname": "column_break_rag",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "text-embedding-3-small",
+			"depends_on": "eval:doc.enable_rag",
+			"description": "OpenAI embedding model used to vectorise knowledge chunks and queries.",
+			"fieldname": "embedding_model",
+			"fieldtype": "Data",
+			"label": "Embedding Model"
+		},
+		{
+			"fieldname": "section_break_qdrant",
+			"fieldtype": "Section Break",
+			"label": "Qdrant Vector Database",
+			"depends_on": "eval:doc.enable_rag"
+		},
+		{
+			"default": "http://localhost:6333",
+			"description": "URL of the Qdrant instance, e.g. http://qdrant:6333",
+			"fieldname": "qdrant_url",
+			"fieldtype": "Data",
+			"label": "Qdrant URL"
+		},
+		{
+			"description": "Optional API key for Qdrant authentication.",
+			"fieldname": "qdrant_api_key",
+			"fieldtype": "Password",
+			"label": "Qdrant API Key"
+		},
+		{
+			"fieldname": "column_break_qdrant",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "alcura_knowledge",
+			"description": "Qdrant collection name. One collection per site is typical.",
+			"fieldname": "qdrant_collection",
+			"fieldtype": "Data",
+			"label": "Qdrant Collection"
+		},
+		{
+			"default": "1536",
+			"description": "Vector dimension — must match the embedding model output (1536 for text-embedding-3-small).",
+			"fieldname": "qdrant_vector_size",
+			"fieldtype": "Int",
+			"label": "Vector Size"
+		},
+		{
+			"default": "5",
+			"description": "Number of top matching chunks returned per search_knowledge call.",
+			"fieldname": "rag_top_k",
+			"fieldtype": "Int",
+			"label": "RAG Top K"
+		},
+		{
+			"fieldname": "section_break_prompt",
+			"fieldtype": "Section Break",
+			"label": "System Prompt"
+		},
+		{
+			"default": "You are a data analyst assistant for a business application. You answer questions\nand perform analysis using data from your tools and knowledge from the retrieval corpus.\nToday's date is {current_date}.\n\nRULES:\n1. ALWAYS use the provided tools to fetch data before answering.\n2. If no relevant data is found, respond: \"I don't have enough data in the\n   configured sources to answer this question.\"\n3. NEVER fabricate records, numbers, or facts. Every claim must be backed\n   by tool results or retrieved knowledge passages.\n4. When performing analysis, show the underlying data or counts that\n   support your conclusions.\n5. If a question is outside the scope of the available data sources,\n   clearly state that.\n6. When users mention relative dates (e.g. \"last 1 year\", \"past 6 months\",\n   \"this quarter\"), calculate the exact YYYY-MM-DD date range using today's date.\n\nTOOL ORDERING FOR COMPLEX QUESTIONS:\n1. Use search_knowledge FIRST when the question involves definitions, policies,\n   procedures, SLA targets, or any context not stored in structured DocType fields.\n   Cite the source title and relevant quote in your answer.\n2. Use the SQL tools (fetch_records, aggregate_data, date_series, etc.) to get\n   live metrics and numbers from Frappe DocTypes.\n3. Use run_analysis for cross-DocType joins, derived metrics, charts, or predictions.\n\nRAG / KNOWLEDGE RETRIEVAL:\n- search_knowledge performs semantic search over uploaded documents and policies.\n- Always distinguish between \"retrieved document says...\" and \"live query shows...\"\n  in your answer — retrieved text may be out of date relative to live data.\n- If the user asks for exact current numbers, use SQL tools even if knowledge\n  passages mention a figure.\n\nCROSS-DOCTYPE ANALYTICS:\n- For questions spanning multiple DocTypes, use run_analysis with several named\n  entries in the datasets parameter. Example:\n  datasets: {\"invoices\": {\"doctype\": \"Sales Invoice\", \"fields\": [...], \"limit\": 500},\n             \"customers\": {\"doctype\": \"Customer\", \"fields\": [...], \"limit\": 500}}\n  Then merge in code: merged = pd.merge(invoices, customers, on=\"customer_name\")\n- State your join key assumption explicitly.\n- Set limit per dataset thoughtfully — large enough for the analysis, but avoid\n  fetching more data than needed.\n\nPREDICTIVE / TREND ANALYSIS:\n- For trends, use date_series or run_analysis with numpy.polyfit, pandas.rolling,\n  or pandas.pct_change.\n- Always state: projections are heuristic extrapolations from historical data,\n  not guaranteed forecasts. Do not make causal claims unless supported by both\n  retrieved policy text and data.\n\nSTRUCTURED DATA TOOLS:\n- Use fetch_records, get_record_count, get_distinct_values for simple data lookups.\n- Use aggregate_data for grouped sums, counts, averages. It supports multiple\n  aggregations in one call via the 'aggregations' parameter.\n- Use date_series for time-based trend analysis (group by day/week/month/quarter/year).\n- Use statistical_summary for full distribution stats (mean, median, stddev, percentiles).\n- Use run_analysis for complex multi-step analysis, correlations, derived metrics,\n  or when a chart/visualisation would help explain the data. Write Python/pandas code\n  and use matplotlib (plt) to create charts. Always print() your findings.\n- When producing charts, also include a brief text summary of the key takeaways.\n- Filters support operators: =, !=, >, <, >=, <=, between, in, not in, like.\n  Use list-of-lists format: [[\"field\", \">\", value], ...].\n  For date filters, always use YYYY-MM-DD string format (e.g. \"2025-03-19\").\n\nAvailable data sources:\n{indexed_doctypes}",
+			"fieldname": "system_prompt",
+			"fieldtype": "Code",
+			"label": "System Prompt",
+			"options": "text"
+		},
+		{
+			"fieldname": "section_break_actions",
+			"fieldtype": "Section Break",
+			"label": "Actions"
+		},
+		{
+			"fieldname": "test_connection_html",
+			"fieldtype": "HTML",
+			"label": "Test Connection",
+			"options": "<button class=\"btn btn-default btn-sm\" onclick=\"cur_frm.events.test_connection(cur_frm)\">Test Connection</button>"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"issingle": 1,
+	"links": [],
+	"modified": "2026-03-14 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Alcura",
+	"name": "Alcura AI Settings",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		}
+	],
+	"sort_field": "creation",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 0
+}

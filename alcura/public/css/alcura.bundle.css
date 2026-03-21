@@ -1,9 +1,0 @@
-/**
- * Alcura Desk stylesheet entry point.
- *
- * This file is auto-discovered by `bench build` and compiled to
- * /assets/alcura/dist/css/alcura.bundle.<hash>.css
- *
- * Include it in hooks.py via:
- *   app_include_css = ["alcura.bundle.css"]
- */
