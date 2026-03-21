@@ -52,7 +52,17 @@ def _get_index_config(doctype):
 	)
 
 	if not indexes:
-		raise ValueError(f"DocType '{doctype}' is not indexed or not enabled for AI access.")
+		available = frappe.get_all(
+			"AI DocType Index",
+			filters={"enabled": 1},
+			fields=["reference_doctype"],
+		)
+		available_names = [a.reference_doctype for a in available]
+		raise ValueError(
+			f"DocType '{doctype}' is not indexed or not enabled for AI access. "
+			f"Available indexed DocTypes: {', '.join(available_names) or 'none'}. "
+			f"Use one of those instead."
+		)
 
 	idx = indexes[0]
 	allowed_fields = frappe.get_all(
@@ -79,90 +89,112 @@ def _sanitize_fields(requested_fields, allowed_fields):
 
 
 def _parse_filters(filters):
-	"""Parse filters from various input formats into Frappe filter format.
+	"""Parse filters from various input formats into a normalised list-of-lists.
 
 	Accepts:
-	  - dict: {"field": "value"} (equality shorthand)
+	  - dict: {"field": "value"} or {"field": ["op", "value"]} (Frappe shorthand)
 	  - list of lists: [["field", "operator", "value"], ...]
 	  - JSON string of either form
+
+	Always returns a list-of-lists or an empty list so downstream code
+	only needs to handle one format.
 	"""
 	if not filters:
-		return {}
+		return []
 	if isinstance(filters, str):
 		filters = json.loads(filters)
-	return filters
+
+	if isinstance(filters, dict):
+		normalised = []
+		for k, v in filters.items():
+			if isinstance(v, (list, tuple)) and len(v) == 2 and isinstance(v[0], str):
+				normalised.append([k, v[0], v[1]])
+			else:
+				normalised.append([k, "=", v])
+		return normalised
+
+	if isinstance(filters, list):
+		return filters
+
+	return []
 
 
 def _validate_filter_fields(filters, allowed_fields):
 	"""Validate that all filter fields are in the allowed set."""
-	if isinstance(filters, dict):
-		for k in filters:
-			if k not in allowed_fields:
-				raise ValueError(f"Filter field '{k}' is not exposed.")
-	elif isinstance(filters, list):
-		for condition in filters:
-			field = condition[0] if isinstance(condition, (list, tuple)) else condition
-			if field not in allowed_fields:
-				raise ValueError(f"Filter field '{field}' is not exposed.")
+	if not filters:
+		return
+	for condition in filters:
+		if not isinstance(condition, (list, tuple)):
+			continue
+		field = condition[0]
+		if field not in allowed_fields:
+			raise ValueError(
+				f"Filter field '{field}' is not exposed. "
+				f"Allowed fields: {', '.join(sorted(allowed_fields))}"
+			)
 
 
 def _build_sql_where(filters, allowed_fields):
-	"""Build a parameterised SQL WHERE clause from dict or list-of-lists filters.
+	"""Build a parameterised SQL WHERE clause from list-of-lists filters.
+
+	``filters`` should already be normalised by ``_parse_filters`` into
+	``[[field, op, value], ...]`` format.
 
 	Returns (where_clause_str, values_dict).
 	"""
 	if not filters:
 		return "", {}
 
+	if isinstance(filters, dict):
+		filters = _parse_filters(filters)
+
 	conditions = []
 	values = {}
 
-	if isinstance(filters, dict):
-		for i, (k, v) in enumerate(filters.items()):
-			if k not in allowed_fields:
-				raise ValueError(f"Filter field '{k}' is not exposed.")
-			param = f"p{i}"
-			conditions.append(f"`{k}` = %({param})s")
-			values[param] = v
-	elif isinstance(filters, list):
-		for i, condition in enumerate(filters):
-			if not isinstance(condition, (list, tuple)) or len(condition) < 3:
-				raise ValueError(f"Invalid filter format: {condition}")
-			field, op, value = condition[0], condition[1].lower(), condition[2]
-			if field not in allowed_fields:
-				raise ValueError(f"Filter field '{field}' is not exposed.")
-			if op not in ALLOWED_FILTER_OPS:
-				raise ValueError(f"Unsupported filter operator: '{op}'")
+	for i, condition in enumerate(filters):
+		if not isinstance(condition, (list, tuple)) or len(condition) < 3:
+			raise ValueError(f"Invalid filter format: {condition}")
+		field, op, value = condition[0], condition[1].lower(), condition[2]
+		if field not in allowed_fields:
+			raise ValueError(
+				f"Filter field '{field}' is not exposed for this DocType. "
+				f"Allowed fields: {', '.join(sorted(allowed_fields))}"
+			)
+		if op not in ALLOWED_FILTER_OPS:
+			raise ValueError(
+				f"Unsupported filter operator: '{op}'. "
+				f"Allowed operators: {', '.join(sorted(ALLOWED_FILTER_OPS))}"
+			)
 
-			param = f"p{i}"
-			if op == "between":
-				if not isinstance(value, (list, tuple)) or len(value) != 2:
-					raise ValueError("'between' operator requires a list of two values.")
-				lo, hi = f"{param}_lo", f"{param}_hi"
-				conditions.append(f"`{field}` BETWEEN %({lo})s AND %({hi})s")
-				values[lo] = value[0]
-				values[hi] = value[1]
-			elif op in ("in", "not in"):
-				if not isinstance(value, (list, tuple)):
-					raise ValueError(f"'{op}' operator requires a list of values.")
-				placeholders = ", ".join(f"%({param}_{j})s" for j in range(len(value)))
-				keyword = "IN" if op == "in" else "NOT IN"
-				conditions.append(f"`{field}` {keyword} ({placeholders})")
-				for j, v in enumerate(value):
-					values[f"{param}_{j}"] = v
-			elif op in ("is", "is not"):
-				keyword = "IS" if op == "is" else "IS NOT"
-				conditions.append(f"`{field}` {keyword} NULL")
-			elif op == "like":
-				conditions.append(f"`{field}` LIKE %({param})s")
-				values[param] = value
-			elif op == "not like":
-				conditions.append(f"`{field}` NOT LIKE %({param})s")
-				values[param] = value
-			else:
-				sql_op = {"=": "=", "!=": "!=", ">": ">", "<": "<", ">=": ">=", "<=": "<="}[op]
-				conditions.append(f"`{field}` {sql_op} %({param})s")
-				values[param] = value
+		param = f"p{i}"
+		if op == "between":
+			if not isinstance(value, (list, tuple)) or len(value) != 2:
+				raise ValueError("'between' operator requires a list of two values.")
+			lo, hi = f"{param}_lo", f"{param}_hi"
+			conditions.append(f"`{field}` BETWEEN %({lo})s AND %({hi})s")
+			values[lo] = value[0]
+			values[hi] = value[1]
+		elif op in ("in", "not in"):
+			if not isinstance(value, (list, tuple)):
+				raise ValueError(f"'{op}' operator requires a list of values.")
+			placeholders = ", ".join(f"%({param}_{j})s" for j in range(len(value)))
+			keyword = "IN" if op == "in" else "NOT IN"
+			conditions.append(f"`{field}` {keyword} ({placeholders})")
+			for j, v in enumerate(value):
+				values[f"{param}_{j}"] = v
+		elif op in ("is", "is not"):
+			keyword = "IS" if op == "is" else "IS NOT"
+			conditions.append(f"`{field}` {keyword} NULL")
+		elif op == "like":
+			conditions.append(f"`{field}` LIKE %({param})s")
+			values[param] = value
+		elif op == "not like":
+			conditions.append(f"`{field}` NOT LIKE %({param})s")
+			values[param] = value
+		else:
+			sql_op = {"=": "=", "!=": "!=", ">": ">", "<": "<", ">=": ">=", "<=": "<="}[op]
+			conditions.append(f"`{field}` {sql_op} %({param})s")
+			values[param] = value
 
 	if not conditions:
 		return "", {}
@@ -184,9 +216,12 @@ def fetch_records(doctype, filters=None, fields=None, order_by=None, limit=None)
 	if limit is None or limit > max_limit:
 		limit = max_limit
 
+	parsed = _parse_filters(filters)
+	_validate_filter_fields(parsed, config["allowed_fields"])
+
 	kwargs = {
 		"doctype": doctype,
-		"filters": _parse_filters(filters),
+		"filters": parsed,
 		"fields": safe_fields,
 		"limit_page_length": limit,
 	}
@@ -201,8 +236,10 @@ def fetch_records(doctype, filters=None, fields=None, order_by=None, limit=None)
 
 def get_record_count(doctype, filters=None):
 	"""Return the total count of records matching the given filters."""
-	_get_index_config(doctype)
-	return frappe.db.count(doctype, filters=_parse_filters(filters))
+	config = _get_index_config(doctype)
+	parsed = _parse_filters(filters)
+	_validate_filter_fields(parsed, config["allowed_fields"])
+	return frappe.db.count(doctype, filters=parsed)
 
 
 def get_distinct_values(doctype, field):
