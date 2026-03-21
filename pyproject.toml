@@ -1,5 +1,5 @@
 [project]
-name = "alcura"
+name = "alcura_ai"
 authors = [
 	{ name = "Alcura", email = "developers@alcura.com" },
 ]

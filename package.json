@@ -1,11 +1,11 @@
 {
-	"name": "alcura",
+	"name": "alcura_ai",
 	"version": "0.0.1",
 	"description": "Custom Frappe Application",
-	"main": "alcura/public/js/alcura.bundle.js",
+	"main": "alcura_ai/public/js/alcura_ai.bundle.js",
 	"scripts": {
-		"lint": "eslint alcura/public/js/ --ext .js",
-		"lint:fix": "eslint alcura/public/js/ --ext .js --fix"
+		"lint": "eslint alcura_ai/public/js/ --ext .js",
+		"lint:fix": "eslint alcura_ai/public/js/ --ext .js --fix"
 	},
 	"devDependencies": {
 		"eslint": "^9.0.0"

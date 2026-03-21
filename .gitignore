@@ -23,7 +23,7 @@ npm-debug.log
 
 # Frappe
 *.pyc
-alcura/public/dist/
+alcura_ai/public/dist/
 
 # IDE
 .vscode/
