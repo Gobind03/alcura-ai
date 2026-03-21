@@ -10,7 +10,7 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from alcura.services.analysis_service import dispatch_analysis, run_analysis
+from alcura_ai.services.analysis_service import dispatch_analysis, run_analysis
 
 
 class TestAnalysisServiceExecution(FrappeTestCase):

@@ -81,12 +81,20 @@ class AlcuraAIChat {
 		this.page = page;
 		this.history = [];
 		this.is_sending = false;
+		this._poll_timer = null;
+		this._active_task_id = null;
 	}
 
 	init() {
 		this.bind_events();
 		this.load_context();
 		this.auto_resize_input();
+		this._bind_realtime();
+	}
+
+	destroy() {
+		this._clear_poll();
+		frappe.realtime.off("alcura_ai_response");
 	}
 
 	bind_events() {
@@ -111,6 +119,15 @@ class AlcuraAIChat {
 		});
 	}
 
+	_bind_realtime() {
+		frappe.realtime.on("alcura_ai_response", (data) => {
+			if (data && data.task_id && data.task_id === this._active_task_id) {
+				this._clear_poll();
+				this._fetch_result(data.task_id);
+			}
+		});
+	}
+
 	auto_resize_input() {
 		const input = document.getElementById("chat-input");
 		input.addEventListener("input", () => {
@@ -124,7 +141,7 @@ class AlcuraAIChat {
 		list.innerHTML = `<div class="text-muted text-sm">${__("Loading...")}</div>`;
 
 		frappe.call({
-			method: "alcura.api.v1.chat.get_context",
+			method: "alcura_ai.api.v1.chat.get_context",
 			callback: (r) => {
 				if (r.message && r.message.doctypes) {
 					this.render_context(r.message.doctypes);
@@ -178,37 +195,109 @@ class AlcuraAIChat {
 		this.set_send_disabled(true);
 
 		frappe.call({
-			method: "alcura.api.v1.chat.send_message",
+			method: "alcura_ai.api.v1.chat.send_message",
 			args: {
 				message: message,
 				history: JSON.stringify(this.history),
 			},
 			callback: (r) => {
-				this.remove_typing_indicator();
-				if (r.message && r.message.response) {
-					const charts = r.message.charts || [];
-					this.append_message("assistant", r.message.response, charts);
+				if (r.message && r.message.task_id) {
+					this._active_task_id = r.message.task_id;
+					this._start_polling(r.message.task_id);
 				} else {
-					this.append_message(
-						"assistant",
-						__("Sorry, I could not generate a response. Please try again.")
-					);
+					this._handle_error(__("Failed to queue message. Please try again."));
 				}
-				this.is_sending = false;
-				this.set_send_disabled(false);
-				input.focus();
 			},
-			error: () => {
-				this.remove_typing_indicator();
-				this.append_message(
-					"assistant",
-					__("An error occurred while processing your request. Please try again.")
-				);
-				this.is_sending = false;
-				this.set_send_disabled(false);
-				input.focus();
+			error: (err) => {
+				let msg = __("An error occurred while sending your message.");
+				if (err && err._server_messages) {
+					try {
+						const parsed = JSON.parse(err._server_messages);
+						if (parsed.length) msg = JSON.parse(parsed[0]).message || msg;
+					} catch (_) {}
+				}
+				this._handle_error(msg);
 			},
 		});
+	}
+
+	_start_polling(task_id) {
+		let delay = 1000;
+		const max_delay = 5000;
+		let elapsed = 0;
+		const timeout = 120000;
+
+		const poll = () => {
+			if (this._active_task_id !== task_id) return;
+
+			elapsed += delay;
+			if (elapsed > timeout) {
+				this._handle_error(__("Request timed out. Please try again."));
+				return;
+			}
+
+			this._fetch_result(task_id, () => {
+				delay = Math.min(delay * 1.5, max_delay);
+				this._poll_timer = setTimeout(poll, delay);
+			});
+		};
+
+		this._poll_timer = setTimeout(poll, delay);
+	}
+
+	_fetch_result(task_id, on_pending) {
+		frappe.call({
+			method: "alcura_ai.api.v1.chat.poll_response",
+			args: { task_id },
+			callback: (r) => {
+				if (!r.message) {
+					if (on_pending) on_pending();
+					return;
+				}
+
+				const data = r.message;
+
+				if (data.status === "done") {
+					this._clear_poll();
+					this.remove_typing_indicator();
+					const charts = data.charts || [];
+					this.append_message("assistant", data.response, charts);
+					this._finish_send();
+				} else if (data.status === "error") {
+					this._clear_poll();
+					this._handle_error(data.error || __("An unexpected error occurred."));
+				} else if (data.status === "expired") {
+					this._clear_poll();
+					this._handle_error(__("Response expired. Please send your message again."));
+				} else {
+					if (on_pending) on_pending();
+				}
+			},
+			error: () => {
+				if (on_pending) on_pending();
+			},
+		});
+	}
+
+	_clear_poll() {
+		if (this._poll_timer) {
+			clearTimeout(this._poll_timer);
+			this._poll_timer = null;
+		}
+	}
+
+	_handle_error(msg) {
+		this._clear_poll();
+		this.remove_typing_indicator();
+		this.append_message("assistant", msg);
+		this._finish_send();
+	}
+
+	_finish_send() {
+		this.is_sending = false;
+		this._active_task_id = null;
+		this.set_send_disabled(false);
+		document.getElementById("chat-input").focus();
 	}
 
 	append_message(role, content, charts) {
@@ -285,7 +374,12 @@ class AlcuraAIChat {
 	}
 
 	new_conversation() {
+		this._clear_poll();
+		this._active_task_id = null;
+		this.is_sending = false;
 		this.history = [];
+		this.set_send_disabled(false);
+
 		const messages_el = document.getElementById("chat-messages");
 		messages_el.innerHTML = "";
 

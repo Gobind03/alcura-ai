@@ -12,6 +12,10 @@
 		"column_break_model",
 		"temperature",
 		"max_tokens",
+		"section_break_limits",
+		"rate_limit_per_hour",
+		"column_break_limits",
+		"max_history_messages",
 		"section_break_prompt",
 		"system_prompt",
 		"section_break_actions",
@@ -63,6 +67,29 @@
 			"fieldname": "max_tokens",
 			"fieldtype": "Int",
 			"label": "Max Tokens"
+		},
+		{
+			"fieldname": "section_break_limits",
+			"fieldtype": "Section Break",
+			"label": "Rate Limiting & History"
+		},
+		{
+			"default": "0",
+			"description": "Maximum messages a user can send per hour. Set to 0 for unlimited.",
+			"fieldname": "rate_limit_per_hour",
+			"fieldtype": "Int",
+			"label": "Rate Limit (per hour)"
+		},
+		{
+			"fieldname": "column_break_limits",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "20",
+			"description": "Maximum number of conversation history messages sent with each request. Limits token usage on long conversations.",
+			"fieldname": "max_history_messages",
+			"fieldtype": "Int",
+			"label": "Max History Messages"
 		},
 		{
 			"fieldname": "section_break_prompt",

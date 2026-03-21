@@ -3,14 +3,14 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from alcura.api.v1.sample import echo, ping
+from alcura_ai.api.v1.sample import echo, ping
 
 
 class TestPingEndpoint(FrappeTestCase):
 	def test_ping_returns_pong(self):
 		result = ping()
 		self.assertEqual(result["message"], "pong")
-		self.assertEqual(result["app"], "alcura")
+		self.assertEqual(result["app"], "alcura_ai")
 		self.assertIn("version", result)
 
 

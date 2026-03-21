@@ -16,7 +16,7 @@ frappe.ui.form.on("Alcura AI Settings", {
 		}
 
 		frappe.call({
-			method: "alcura.api.v1.settings.test_openai_connection",
+			method: "alcura_ai.api.v1.settings.test_openai_connection",
 			freeze: true,
 			freeze_message: __("Testing OpenAI connection..."),
 			callback(r) {

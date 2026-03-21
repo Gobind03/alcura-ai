@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 import frappe
@@ -6,6 +7,10 @@ from openai import OpenAI
 
 MAX_TOOL_ITERATIONS = 10
 FORCE_ANSWER_AFTER = 8
+
+# Module-level client cache: avoids re-creating the OpenAI HTTP
+# connection pool on every request within the same gunicorn worker.
+_client_cache = {"key_hash": None, "client": None}
 
 
 def _get_logger():
@@ -21,18 +26,28 @@ def get_settings():
 	return settings
 
 
-def get_client():
-	settings = get_settings()
-	return OpenAI(api_key=settings.get_password("api_key"))
+def get_client(settings=None):
+	"""Return a cached OpenAI client, re-creating only when the API key changes."""
+	settings = settings or get_settings()
+	api_key = settings.get_password("api_key")
+	key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+	if _client_cache["key_hash"] == key_hash and _client_cache["client"] is not None:
+		return _client_cache["client"]
+
+	client = OpenAI(api_key=api_key)
+	_client_cache["key_hash"] = key_hash
+	_client_cache["client"] = client
+	return client
 
 
 def test_connection():
-	"""Validate the API key by listing models."""
+	"""Validate the API key by making a lightweight completion call."""
 	settings = frappe.get_single("Alcura AI Settings")
 	if not settings.api_key:
 		frappe.throw("OpenAI API key is not configured.")
 
-	client = OpenAI(api_key=settings.get_password("api_key"))
+	client = get_client(settings)
 	model_id = settings.model or "gpt-4o-mini"
 
 	token_kwarg = "max_completion_tokens" if model_id.startswith(("gpt-4.1", "o")) else "max_tokens"
@@ -89,7 +104,7 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 		The final assistant text response.
 	"""
 	settings = get_settings()
-	client = OpenAI(api_key=settings.get_password("api_key"))
+	client = get_client(settings)
 
 	model = settings.model or "gpt-4o-mini"
 	temperature = settings.temperature if settings.temperature is not None else 0.2
@@ -116,8 +131,6 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 		}
 		if tools:
 			kwargs["tools"] = tools
-			# Force the model to call at least one tool on the first iteration
-			# so it actually looks up data before deciding it can't answer.
 			kwargs["tool_choice"] = "required" if iteration == 0 else "auto"
 
 		response = client.chat.completions.create(**kwargs)

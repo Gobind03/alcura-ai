@@ -1,6 +1,6 @@
 """Shared pytest fixtures for Alcura tests.
 
-Tests must be run via `bench run-tests --app alcura` which initialises
+Tests must be run via `bench run-tests --app alcura_ai` which initialises
 the Frappe environment (database, site config, etc.) before test
 collection begins.
 """

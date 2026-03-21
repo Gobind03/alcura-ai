@@ -1,13 +1,13 @@
 import frappe
 
-from alcura.services.openai_service import test_connection
+from alcura_ai.services.openai_service import test_connection
 
 
 @frappe.whitelist()
 def test_openai_connection():
 	"""Test the OpenAI API connection using the configured key.
 
-	Callable at: /api/method/alcura.api.v1.settings.test_openai_connection
+	Callable at: /api/method/alcura_ai.api.v1.settings.test_openai_connection
 	"""
 	frappe.only_for("System Manager")
 

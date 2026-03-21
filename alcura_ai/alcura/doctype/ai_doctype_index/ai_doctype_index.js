@@ -50,7 +50,7 @@ function set_field_name_options(frm) {
 	if (!frm.doc.reference_doctype) return;
 
 	frappe.call({
-		method: "alcura.alcura.doctype.ai_doctype_index.ai_doctype_index.get_doctype_fields",
+		method: "alcura_ai.alcura.doctype.ai_doctype_index.ai_doctype_index.get_doctype_fields",
 		args: { doctype: frm.doc.reference_doctype },
 		callback(r) {
 			if (!r.message) return;

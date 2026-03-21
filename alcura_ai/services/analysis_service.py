@@ -12,7 +12,7 @@ import traceback
 
 import frappe
 
-from alcura.services.data_service import _get_index_config, fetch_records
+from alcura_ai.services.data_service import _get_index_config, fetch_records
 
 EXECUTION_TIMEOUT = 30
 

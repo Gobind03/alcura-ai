@@ -3,6 +3,8 @@ import math
 
 import frappe
 
+from alcura_ai.services.cache_service import get_cached, invalidate_all
+
 
 ALLOWED_FILTER_OPS = {"=", "!=", ">", "<", ">=", "<=", "between", "in", "not in", "like", "not like", "is", "is not"}
 
@@ -15,8 +17,8 @@ DATE_PERIOD_FORMATS = {
 }
 
 
-def get_indexed_doctypes():
-	"""Return metadata for all enabled AI DocType Index records."""
+def _fetch_indexed_doctypes():
+	"""Uncached implementation: query DB for all enabled AI DocType Index records."""
 	indexes = frappe.get_all(
 		"AI DocType Index",
 		filters={"enabled": 1},
@@ -41,6 +43,15 @@ def get_indexed_doctypes():
 		)
 
 	return result
+
+
+def get_indexed_doctypes():
+	"""Return cached metadata for all enabled AI DocType Index records.
+
+	Backed by a 5-minute Redis cache; invalidated whenever an
+	AI DocType Index record is saved or deleted.
+	"""
+	return get_cached("indexed_doctypes", _fetch_indexed_doctypes)
 
 
 def _get_index_config(doctype):
@@ -492,9 +503,9 @@ def dispatch_tool_call(name, arguments):
 	return dispatchers[name](arguments)
 
 
-def build_tool_definitions():
-	"""Generate OpenAI function-calling tool definitions."""
-	indexed = get_indexed_doctypes()
+def _build_tool_definitions_uncached():
+	"""Generate OpenAI function-calling tool definitions (uncached)."""
+	indexed = _fetch_indexed_doctypes()
 	if not indexed:
 		return []
 
@@ -756,8 +767,16 @@ def build_tool_definitions():
 							},
 						},
 					},
-					"required": ["code", "datasets"],
-				},
+				"required": ["code", "datasets"],
 			},
 		},
+	},
 	]
+
+
+def build_tool_definitions():
+	"""Return cached OpenAI tool definitions.
+
+	Rebuilds from DB only when the cache is empty or expired.
+	"""
+	return get_cached("tool_definitions", _build_tool_definitions_uncached)

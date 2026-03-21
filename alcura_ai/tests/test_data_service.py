@@ -9,7 +9,7 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from alcura.services.data_service import (
+from alcura_ai.services.data_service import (
 	_build_sql_where,
 	aggregate_data,
 	build_tool_definitions,

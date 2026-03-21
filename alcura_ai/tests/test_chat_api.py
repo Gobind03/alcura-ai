@@ -9,7 +9,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from alcura.api.v1.chat import get_context
+from alcura_ai.api.v1.chat import get_context
 
 
 class TestChatGetContext(FrappeTestCase):
@@ -61,13 +61,13 @@ class TestChatSendMessageValidation(FrappeTestCase):
 	"""Test input validation for send_message (no OpenAI calls)."""
 
 	def test_empty_message_raises(self):
-		from alcura.api.v1.chat import send_message
+		from alcura_ai.api.v1.chat import send_message
 
 		with self.assertRaises(frappe.exceptions.ValidationError):
 			send_message(message="")
 
 	def test_disabled_ai_raises(self):
-		from alcura.api.v1.chat import send_message
+		from alcura_ai.api.v1.chat import send_message
 
 		settings = frappe.get_single("Alcura AI Settings")
 		settings.enabled = 0
@@ -115,9 +115,9 @@ class TestChatResponseFormat(FrappeTestCase):
 		settings.api_key = "test-key"
 		settings.save()
 
-	@patch("alcura.api.v1.chat.chat_with_tools")
+	@patch("alcura_ai.api.v1.chat.chat_with_tools")
 	def test_response_has_charts_key(self, mock_chat):
-		from alcura.api.v1.chat import send_message
+		from alcura_ai.api.v1.chat import send_message
 
 		mock_chat.return_value = "Here is your analysis."
 		result = send_message(message="Analyze my data")
@@ -126,9 +126,9 @@ class TestChatResponseFormat(FrappeTestCase):
 		self.assertEqual(result["response"], "Here is your analysis.")
 		self.assertIsInstance(result["charts"], list)
 
-	@patch("alcura.api.v1.chat.chat_with_tools")
+	@patch("alcura_ai.api.v1.chat.chat_with_tools")
 	def test_no_charts_returns_empty_list(self, mock_chat):
-		from alcura.api.v1.chat import send_message
+		from alcura_ai.api.v1.chat import send_message
 
 		mock_chat.return_value = "No charts needed."
 		result = send_message(message="How many records?")
