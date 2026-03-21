@@ -10,3 +10,14 @@ class AlcuraAISettings(Document):
 
 		if self.max_tokens is not None and self.max_tokens < 1:
 			frappe.throw("Max Tokens must be at least 1.")
+
+		if self.enable_rag:
+			if not self.qdrant_url:
+				frappe.throw("Qdrant URL is required when RAG is enabled.")
+			if not self.qdrant_collection:
+				frappe.throw("Qdrant Collection name is required when RAG is enabled.")
+			if not self.qdrant_vector_size or self.qdrant_vector_size < 1:
+				frappe.throw("Vector Size must be a positive integer matching your embedding model.")
+
+		if self.max_tool_iterations is not None and self.max_tool_iterations < 1:
+			frappe.throw("Max Tool Iterations must be at least 1.")

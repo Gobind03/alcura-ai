@@ -5,8 +5,8 @@ import frappe
 from openai import OpenAI
 
 
-MAX_TOOL_ITERATIONS = 10
-FORCE_ANSWER_AFTER = 8
+DEFAULT_MAX_TOOL_ITERATIONS = 15
+DEFAULT_FORCE_ANSWER_AFTER = 12
 
 # Module-level client cache: avoids re-creating the OpenAI HTTP
 # connection pool on every request within the same gunicorn worker.
@@ -110,14 +110,17 @@ def chat_with_tools(messages, tools, tool_dispatcher):
 	temperature = settings.temperature if settings.temperature is not None else 0.2
 	max_tokens = settings.max_tokens or 4096
 
+	max_iterations = settings.max_tool_iterations or DEFAULT_MAX_TOOL_ITERATIONS
+	force_after = max(1, max_iterations - 3)
+
 	uses_max_completion_tokens = model.startswith("gpt-4.1") or model.startswith("o")
 	token_param = "max_completion_tokens" if uses_max_completion_tokens else "max_tokens"
 
 	failed_tools = {}
 	logger = _get_logger()
 
-	for iteration in range(MAX_TOOL_ITERATIONS):
-		if iteration >= FORCE_ANSWER_AFTER:
+	for iteration in range(max_iterations):
+		if iteration >= force_after:
 			logger.info(f"Iteration {iteration}: forcing text response (budget exceeded)")
 			return _force_text_response(
 				client, model, messages, temperature, token_param, max_tokens, tools

@@ -42,6 +42,11 @@ doc_events = {
 	"Alcura AI Settings": {
 		"on_update": "alcura_ai.services.cache_service.invalidate_all",
 	},
+	"Alcura Knowledge Source": {
+		"after_insert": "alcura_ai.services.cache_service.invalidate_all",
+		"on_update": "alcura_ai.services.cache_service.invalidate_all",
+		"on_trash": "alcura_ai.services.cache_service.invalidate_all",
+	},
 }
 
 # --- Scheduled Tasks ---

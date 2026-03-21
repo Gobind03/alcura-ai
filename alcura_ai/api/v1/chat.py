@@ -19,6 +19,8 @@ from alcura_ai.services.data_service import (
 	get_indexed_doctypes,
 )
 from alcura_ai.services.openai_service import chat_with_tools
+from alcura_ai.services.rag_service import format_tool_result as format_rag_result
+from alcura_ai.services.rag_service import search as rag_search
 from alcura_ai.services.rate_limiter import check_rate_limit, record_usage
 
 MAX_HISTORY_MESSAGES_DEFAULT = 20
@@ -135,13 +137,23 @@ def poll_response(task_id):
 
 @frappe.whitelist()
 def get_context():
-	"""Return the list of indexed DocTypes and descriptions for the chat UI.
+	"""Return indexed DocTypes and active knowledge sources for the chat UI.
 
 	Callable at: /api/method/alcura_ai.api.v1.chat.get_context
 	"""
 	frappe.only_for("System Manager")
 
 	indexed = get_indexed_doctypes()
+
+	settings = frappe.get_single("Alcura AI Settings")
+	knowledge_sources = []
+	if settings.enable_rag:
+		knowledge_sources = frappe.get_all(
+			"Alcura Knowledge Source",
+			filters={"is_active": 1},
+			fields=["title", "source_type", "chunk_count", "last_indexed"],
+		)
+
 	return {
 		"doctypes": [
 			{
@@ -150,7 +162,9 @@ def get_context():
 				"field_count": len(d["fields"]),
 			}
 			for d in indexed
-		]
+		],
+		"knowledge_sources": knowledge_sources,
+		"rag_enabled": bool(settings.enable_rag),
 	}
 
 
@@ -222,6 +236,13 @@ def _process_message(task_id, message, history, user, site):
 				result_json, charts = dispatch_analysis(arguments)
 				collected_charts.extend(charts)
 				return result_json
+			if name == "search_knowledge":
+				hits = rag_search(
+					query=arguments.get("query", ""),
+					top_k=arguments.get("top_k"),
+					source_filter=arguments.get("source_filter"),
+				)
+				return format_rag_result(hits)
 			return dispatch_tool_call(name, arguments)
 
 		response_text = chat_with_tools(messages, tools, _dispatch)

@@ -12,6 +12,7 @@ dependencies = [
 	"pandas>=2.0",
 	"matplotlib>=3.7",
 	"numpy>=1.24",
+	"qdrant-client>=1.9",
 ]
 
 [build-system]

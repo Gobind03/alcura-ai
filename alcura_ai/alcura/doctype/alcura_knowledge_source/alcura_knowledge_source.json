@@ -1,0 +1,137 @@
+{
+	"actions": [],
+	"autoname": "hash",
+	"creation": "2026-03-21 00:00:00.000000",
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"title",
+		"source_type",
+		"is_active",
+		"column_break_main",
+		"attachment",
+		"source_url",
+		"section_break_content",
+		"content",
+		"section_break_status",
+		"chunk_count",
+		"column_break_status",
+		"last_indexed",
+		"section_break_actions",
+		"build_index_html"
+	],
+	"fields": [
+		{
+			"fieldname": "title",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Title",
+			"reqd": 1
+		},
+		{
+			"default": "Manual",
+			"fieldname": "source_type",
+			"fieldtype": "Select",
+			"in_list_view": 1,
+			"label": "Source Type",
+			"options": "Manual\nFile\nURL",
+			"reqd": 1
+		},
+		{
+			"default": "1",
+			"fieldname": "is_active",
+			"fieldtype": "Check",
+			"in_list_view": 1,
+			"label": "Active"
+		},
+		{
+			"fieldname": "column_break_main",
+			"fieldtype": "Column Break"
+		},
+		{
+			"depends_on": "eval:doc.source_type=='File'",
+			"fieldname": "attachment",
+			"fieldtype": "Attach",
+			"label": "File"
+		},
+		{
+			"depends_on": "eval:doc.source_type=='URL'",
+			"fieldname": "source_url",
+			"fieldtype": "Data",
+			"label": "URL",
+			"options": "URL"
+		},
+		{
+			"fieldname": "section_break_content",
+			"fieldtype": "Section Break",
+			"label": "Content"
+		},
+		{
+			"description": "Paste or edit the knowledge text directly. For File sources this is populated automatically after indexing.",
+			"fieldname": "content",
+			"fieldtype": "Code",
+			"label": "Content",
+			"options": "text"
+		},
+		{
+			"fieldname": "section_break_status",
+			"fieldtype": "Section Break",
+			"label": "Index Status"
+		},
+		{
+			"default": "0",
+			"fieldname": "chunk_count",
+			"fieldtype": "Int",
+			"label": "Chunk Count",
+			"read_only": 1
+		},
+		{
+			"fieldname": "column_break_status",
+			"fieldtype": "Column Break"
+		},
+		{
+			"fieldname": "last_indexed",
+			"fieldtype": "Datetime",
+			"label": "Last Indexed",
+			"read_only": 1
+		},
+		{
+			"fieldname": "section_break_actions",
+			"fieldtype": "Section Break",
+			"label": "Actions"
+		},
+		{
+			"fieldname": "build_index_html",
+			"fieldtype": "HTML",
+			"label": "Build Index",
+			"options": "<button class=\"btn btn-primary btn-sm\" onclick=\"cur_frm.events.build_index(cur_frm)\">Build Index</button> <button class=\"btn btn-danger btn-sm\" onclick=\"cur_frm.events.clear_index(cur_frm)\">Clear Index</button>"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"links": [],
+	"modified": "2026-03-21 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Alcura",
+	"name": "Alcura Knowledge Source",
+	"naming_rule": "Random",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		}
+	],
+	"sort_field": "creation",
+	"sort_order": "DESC",
+	"states": [],
+	"title_field": "title",
+	"track_changes": 1
+}

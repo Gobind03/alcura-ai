@@ -57,7 +57,7 @@ def invalidate_all(doc=None, method=None):
 	Frappe doc_event handler.
 	"""
 	cache = frappe.cache
-	for suffix in ("indexed_doctypes", "tool_definitions"):
+	for suffix in ("indexed_doctypes", "tool_definitions", "rag_sources"):
 		cache.delete_value(_make_key(suffix))
 
 

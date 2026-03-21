@@ -739,10 +739,15 @@ def _build_tool_definitions_uncached():
 			"function": {
 				"name": "run_analysis",
 				"description": (
-					"Execute Python/pandas code to perform advanced data analysis and create charts. "
-					"Data from indexed DocTypes is pre-loaded as pandas DataFrames. "
-					"Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), math, statistics, datetime, collections. "
-					"Use print() to output results. Use plt to create charts (bar, line, pie, scatter, hist, etc.). "
+					"Execute Python/pandas code for advanced analysis, cross-DocType joins, "
+					"trend/prediction calculations, and chart generation. "
+					"Specify MULTIPLE entries in 'datasets' to load data from several DocTypes "
+					"into separate pandas DataFrames, then merge/join them in code "
+					"(e.g. pd.merge(df1, df2, on='shared_key')). "
+					"Available libraries: pandas (pd), numpy (np), matplotlib.pyplot (plt), "
+					"math, statistics, datetime, collections. "
+					"For trends use np.polyfit or df.rolling(). For growth rates use df.pct_change(). "
+					"Use print() to output results. Use plt to create charts. "
 					f"Available DocTypes for datasets: {doctype_enum_desc}"
 				),
 				"parameters": {
@@ -754,7 +759,12 @@ def _build_tool_definitions_uncached():
 						},
 						"datasets": {
 							"type": "object",
-							"description": "Dict of variable_name -> {doctype, filters, fields, limit}. Each becomes a pandas DataFrame accessible by variable_name in the code.",
+							"description": (
+								"Dict of variable_name -> {doctype, filters, fields, limit}. Each becomes "
+								"a pandas DataFrame accessible by that variable_name in the code. "
+								"Use MULTIPLE entries to combine data from different DocTypes. "
+								"Set limit per dataset to control memory (e.g. 500)."
+							),
 							"additionalProperties": {
 								"type": "object",
 								"properties": {
@@ -774,9 +784,67 @@ def _build_tool_definitions_uncached():
 	]
 
 
+def _build_rag_tool_definition():
+	"""Return the search_knowledge tool definition if RAG is enabled, else None."""
+	settings = frappe.get_single("Alcura AI Settings")
+	if not settings.enable_rag:
+		return None
+
+	sources = frappe.get_all(
+		"Alcura Knowledge Source",
+		filters={"is_active": 1},
+		fields=["title"],
+		limit_page_length=50,
+	)
+	if not sources:
+		return None
+
+	source_list = ", ".join(s["title"] for s in sources)
+
+	return {
+		"type": "function",
+		"function": {
+			"name": "search_knowledge",
+			"description": (
+				"Semantic search over the uploaded knowledge corpus (policies, documentation, "
+				"playbooks, reference material). Returns the most relevant text passages. "
+				"Use this when the question involves definitions, procedures, context, or "
+				"information NOT stored in structured DocType fields. "
+				f"Active knowledge sources: {source_list}"
+			),
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"query": {
+						"type": "string",
+						"description": "Natural-language search query describing what information you need.",
+					},
+					"top_k": {
+						"type": "integer",
+						"description": "Number of results to return (default: from settings).",
+					},
+					"source_filter": {
+						"type": "string",
+						"description": "Optional: restrict search to a specific knowledge source by its ID.",
+					},
+				},
+				"required": ["query"],
+			},
+		},
+	}
+
+
 def build_tool_definitions():
 	"""Return cached OpenAI tool definitions.
 
-	Rebuilds from DB only when the cache is empty or expired.
+	Includes structured data tools and, when RAG is enabled, the
+	search_knowledge tool.
 	"""
-	return get_cached("tool_definitions", _build_tool_definitions_uncached)
+	def _builder():
+		tools = _build_tool_definitions_uncached()
+		rag_tool = _build_rag_tool_definition()
+		if rag_tool:
+			tools.append(rag_tool)
+		return tools
+
+	return get_cached("tool_definitions", _builder)
